@@ -1,7 +1,7 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterSupplyChain
 metadata:
-  name: loganspipeline
+  name: gitops-test-scan
   resourceVersion: "498794862"
 spec:
   params:
@@ -139,7 +139,7 @@ spec:
         server: harbor.vmw.binbytes.io
     templateRef:
       kind: ClusterTemplate
-      name: lk-config-writer-and-pull-requester-template
+      name: gitops-config-writer-and-pull-requester-template
   - name: deliverable
     sources:
     - name: source
@@ -152,10 +152,10 @@ spec:
         server: harbor.vmw.binbytes.io
     templateRef:
       kind: ClusterTemplate
-      name: lk-deliverable-template
+      name: gitops-deliverable-template
   selector:
     apps.tanzu.vmware.com/has-tests: "true"
-    apps.tanzu.vmware.com/workload-type: logan
+    apps.tanzu.vmware.com/workload-type: gitops
 ---
 apiVersion: carto.run/v1alpha1
 kind: ClusterTemplate
@@ -164,7 +164,7 @@ metadata:
     app.tanzu.vmware.com/deliverable-type: web
     kapp.k14s.io/app: "1657647125051646677"
     kapp.k14s.io/association: v1.1ffcda80f456c9e6f298bc5cfbbe05cb
-  name: lk-deliverable-template
+  name: gitops-deliverable-template
   resourceVersion: "339338834"
   uid: adf227f7-978a-4778-ba5d-7c308d0d7433
 spec:
@@ -296,7 +296,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterTemplate
 metadata:
-  name: lk-config-writer-and-pull-requester-template
+  name: gitops-config-writer-and-pull-requester-template
 spec:
   ytt: |
     #@ load("@ytt:data", "data")
@@ -315,6 +315,11 @@ spec:
     #@ def git_commit():
     #@   ref = data.values.source.revision
     #@   return ref.replace("main/","git-")
+    #@ end
+
+    #@ def commit_link():
+    #@   ref = data.values.source.revision.replace("main/","")
+    #@   return data.values.workload.spec.source.git.url + "/commit/" + ref
     #@ end
 
     ---
@@ -336,7 +341,7 @@ spec:
         git_server_address: #@ data.values.params.gitops_server_address
         commit_branch: #@ git_commit()
         pull_request_title: #@ data.values.params.gitops_pull_request_title
-        pull_request_body: #@ data.values.params.gitops_pull_request_body
+        pull_request_body: #@ "Change found here:" + commit_link()
         repository_owner: #@ data.values.params.gitops_repository_owner
         repository_name: #@ data.values.params.gitops_repository_name
         base_branch: #@ data.values.params.gitops_branch
