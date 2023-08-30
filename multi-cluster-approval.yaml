@@ -2,7 +2,6 @@ apiVersion: carto.run/v1alpha1
 kind: ClusterSupplyChain
 metadata:
   name: gitops-test-scan
-  resourceVersion: "498794862"
 spec:
   params:
   - name: maven_repository_url
@@ -67,8 +66,8 @@ spec:
     - name: registry
       value:
         ca_cert_data: ""
-        repository: tap
-        server: harbor.vmw.binbytes.io
+        repository: lkimmel-1069/tap
+        server: us-west1-docker.pkg.dev
     - default: default
       name: clusterBuilder
     - default: ./Dockerfile
@@ -93,10 +92,10 @@ spec:
           matchFields:
           - key: spec.params[?(@.name=="dockerfile")]
             operator: Exists
-  - images:
+  - name: image-scanner
+    images:
     - name: image
       resource: image-builder
-    name: image-scanner
     params:
     - default: scan-policy
       name: scanning_image_policy
@@ -105,27 +104,27 @@ spec:
     templateRef:
       kind: ClusterImageTemplate
       name: image-scanner-template
-  - images:
+  - name: config-provider
+    images:
     - name: image
       resource: image-scanner
-    name: config-provider
     params:
     - name: serviceAccount
       value: default
     templateRef:
       kind: ClusterConfigTemplate
       name: convention-template
-  - configs:
+  - name: app-config
+    configs:
     - name: config
       resource: config-provider
-    name: app-config
     templateRef:
       kind: ClusterConfigTemplate
       name: config-template
-  - configs:
+  - name: config-writer
+    configs:
     - name: config
       resource: app-config
-    name: config-writer
     sources:
     - name: source
       resource: source-provider
@@ -135,8 +134,8 @@ spec:
     - name: registry
       value:
         ca_cert_data: ""
-        repository: tap
-        server: harbor.vmw.binbytes.io
+        repository: lkimmel-1069/tap
+        server: us-west1-docker.pkg.dev
     templateRef:
       kind: ClusterTemplate
       name: gitops-config-writer-and-pull-requester-template
@@ -144,6 +143,9 @@ spec:
     sources:
     - name: source
       resource: source-provider
+    configs:
+    - name: config
+      resource: app-config
     params:
     - name: registry
       value:
@@ -162,11 +164,7 @@ kind: ClusterTemplate
 metadata:
   labels:
     app.tanzu.vmware.com/deliverable-type: web
-    kapp.k14s.io/app: "1657647125051646677"
-    kapp.k14s.io/association: v1.1ffcda80f456c9e6f298bc5cfbbe05cb
   name: gitops-deliverable-template
-  resourceVersion: "339338834"
-  uid: adf227f7-978a-4778-ba5d-7c308d0d7433
 spec:
   params:
   - default: {}
