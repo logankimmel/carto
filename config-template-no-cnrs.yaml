@@ -1,0 +1,111 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterConfigTemplate
+metadata:
+  name: config-template-no-cnrs
+spec:
+  configPath: .data
+  healthRule:
+    alwaysHealthy: {}
+  lifecycle: mutable
+  ytt: |
+    #@ load("@ytt:data", "data")
+    #@ load("@ytt:yaml", "yaml")
+    #@ load("@ytt:template", "template")
+
+    #@ def merge_labels(fixed_values):
+    #@   labels = {}
+    #@   if hasattr(data.values.workload.metadata, "labels"):
+    #@     labels.update(data.values.workload.metadata.labels)
+    #@   end
+    #@   labels.update(fixed_values)
+    #@   return labels
+    #@ end
+
+
+    #@ def docs_to_map(docs):
+    #@   result = {}
+    #@   for doc in docs:
+    #@      result[doc["kind"]] = doc
+    #@   end
+    #@   return result
+    #@ end
+
+    #@ def kustomize():
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    resources:
+      - deployment.yaml
+      - service.yaml
+      - ingress.yaml
+    #@ end
+
+    #@ def deployment():
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: #@ data.values.workload.metadata.name
+      labels:
+        app: #@ data.values.workload.metadata.name
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: #@ data.values.workload.metadata.name
+      template:
+        metadata:
+          labels:
+            app: #@ data.values.workload.metadata.name
+        spec:
+          containers: #@ data.values.config.spec.containers
+    #@ end
+
+    #@ def service():
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: #@ data.values.workload.metadata.name
+    spec:
+      ports:
+      - port: 80
+        protocol: TCP
+        targetPort: 8080
+      selector:
+        app: #@ data.values.workload.metadata.name
+      sessionAffinity: None
+      type: ClusterIP
+    #@ end
+
+    #@ def ingress():
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: #@ data.values.workload.metadata.name
+      namespace: default
+      annotations:
+        nginx.ingress.kubernetes.io/rewrite-target: /
+    spec:
+      rules:
+      - http:
+          paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: #@ data.values.workload.metadata.name
+                port:
+                  number: 80
+    #@ end
+
+    ---
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: #@ data.values.workload.metadata.name
+      labels: #@ merge_labels({ "app.kubernetes.io/component": "config" })
+    data:
+      kustomization.yaml: #@ yaml.encode(kustomize())
+      deployment.yaml: #@ yaml.encode(deployment())
+      service.yaml: #@ yaml.encode(service())
+      ingress.yaml: #@ yaml.encode(ingress())
+       
