@@ -22,15 +22,6 @@ spec:
     #@   return labels
     #@ end
 
-
-    #@ def docs_to_map(docs):
-    #@   result = {}
-    #@   for doc in docs:
-    #@      result[doc["kind"]] = doc
-    #@   end
-    #@   return result
-    #@ end
-
     #@ def kustomize():
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
